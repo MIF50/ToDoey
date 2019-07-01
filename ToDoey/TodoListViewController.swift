@@ -11,11 +11,16 @@ import UIKit
 class TodoListViewController: UITableViewController {
     
     var itemArray = ["Find Mike", "Bug Eggos", "Destory Demogorgon"]
+    
+    let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         tableView.separatorStyle = .none
+        if let items = defaults.array(forKey: "TodoItemArray") as? [String]{
+            itemArray = items
+        }
     }
     
     //MARK:- TableView DataSource Methods
@@ -58,6 +63,7 @@ class TodoListViewController: UITableViewController {
             guard let newItemArray = textField.text else { return}
             
             self.itemArray.append(newItemArray)
+            self.defaults.setValue(self.itemArray, forKey: "TodoItemArray")
             self.tableView.reloadData()
             
             
