@@ -8,8 +8,9 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
     
     var realm = try! Realm()
     var todoItems: Results<Item>?
@@ -20,10 +21,37 @@ class TodoListViewController: UITableViewController {
         }
     }
     
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        updateUI()
         
+    }
+    
+    private func updateUI() {
         tableView.separatorStyle = .none
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        guard let category = selectedCategory else {fatalError()}
+        navigationItem.title = category.name
+        updateNavBar(withHexCode: category.color)
+        
+        
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexCode: "#1D8BF6")
+    }
+    
+    private func updateNavBar(withHexCode colorHex: String){
+        guard let navBar = navigationController?.navigationBar else {fatalError ("navigation controller does not exit")}
+        guard let navBarColorHex = UIColor(hexString: colorHex) else {fatalError()}
+        navBar.barTintColor = navBarColorHex
+        navBar.tintColor = ContrastColorOf(navBarColorHex, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedString.Key.foregroundColor: ContrastColorOf(navBarColorHex, returnFlat: true)]
+        searchBar.barTintColor = navBarColorHex
     }
     
     //MARK:- TableView DataSource Methods
@@ -35,9 +63,15 @@ class TodoListViewController: UITableViewController {
     
     // Provide a cell object for each row.
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell",for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         // configure the cell's contents.
         if let item = todoItems?[indexPath.row] {
+            let categoryColor = UIColor(hexString: selectedCategory!.color)
+            if let color = categoryColor?.darken(byPercentage: (CGFloat(indexPath.row)/CGFloat(todoItems!.count))) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
+            
             cell.textLabel?.text = item.title
             cell.accessoryType = item.done ? .checkmark : .none
         } else {
@@ -105,22 +139,34 @@ class TodoListViewController: UITableViewController {
         todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
         tableView.reloadData()
     }
+    
+    override func updateModel(at indexPath: IndexPath) {
+        if let item = todoItems?[indexPath.row] {
+            do {
+                try realm.write {
+                    realm.delete(item)
+                }
+            } catch {
+                print("Error Deleting item SwipeCellKit\(error)")
+            }
+        }
+    }
 }
 
 //MARK: - Search bar methods
 
 extension TodoListViewController: UISearchBarDelegate {
-
+    
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         if let searchTextEnterd = searchBar.text {
             todoItems = todoItems?.filter("title CONTAINS[cd] %@", searchTextEnterd)
-            .sorted(byKeyPath: "createdAt", ascending: false)
+                .sorted(byKeyPath: "createdAt", ascending: false)
             tableView.reloadData()
         }
-       
+        
     }
-
-
+    
+    
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         if searchBar.text!.count == 0 {
             loadItems()
