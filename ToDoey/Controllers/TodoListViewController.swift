@@ -141,10 +141,10 @@ class TodoListViewController: SwipeTableViewController {
     }
     
     override func updateModel(at indexPath: IndexPath) {
-        if let item = todoItems?[indexPath.row] {
+        if let itemForDeletion = todoItems?[indexPath.row] {
             do {
                 try realm.write {
-                    realm.delete(item)
+                    realm.delete(itemForDeletion)
                 }
             } catch {
                 print("Error Deleting item SwipeCellKit\(error)")
